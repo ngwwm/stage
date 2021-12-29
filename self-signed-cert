@@ -1,0 +1,26 @@
+1. Generate CA key pairs
+
+openssl genrsa -des3 -out myCA.key 2048
+openssl req -x509 -new -nodes -key myCA.key -sha256 -days 1825 -out myCA.pem
+
+2. Create cert request
+
+export domain=people.cloudns.ph
+
+openssl genrsa -out ${domain}.key 2048
+openssl req -new -key ${domain}.key -out ${domain}.csr -config san.conf
+
+3. Sign the cert req
+openssl x509 -req -in ${domain}.csr -CA myCA.pem -CAkey myCA.key -CAcreateserial -out ${domain}.crt -days 3650 -sha256 -extfile san.conf -extensions req_ext
+
+4. Create .pfx
+
+cp myCA.pem ${domain}+ca.crt
+cat ${domain}.crt >> ${domain}+ca.crt
+openssl verify -verbose -purpose sslserver -CAfile myCA.pem  ${domain}+ca.crt
+openssl pkcs12 -export -out ${domain}.pfx -inkey ${domain}.key -in ${domain}+ca.crt -certfile myCA.pem
+
+
+5. Inspect
+openssl req -text -noout -verify -in ${domain}.csr
+openssl x509 -in ${domain}.crt -text -noout
